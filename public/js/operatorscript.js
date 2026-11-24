@@ -10,6 +10,10 @@ var     currentUserId   = [-1,-1,-1,-1,-1,-1,-1,-1];
 const videoGrid         = document.getElementById('video-grid');
 var   RingAudio         = document.getElementById("myAudio");
 
+// Operator's own camera stream, stored at module level so
+// connectToNewUser() can reuse it.
+let localStream = null;
+
 ///////////////////////////////////////////////////////////
 function ProcessRing()
 {
@@ -41,43 +45,91 @@ function ProcessRing()
     }
 }
 ///////////////////////////////////////////////////////////
-const myPeer    = new Peer(ROOM_ID,{
-    key: 'peerjs',
-    host: '/',
-    port: '3001',
+
+// ---- PeerJS 1.x config (matches server.js: PeerServer({port:3001, ssl:{...}}))
+const myPeer = new Peer(OPERATOR_ID, {
+    host: window.location.hostname,
+    port: 3001,
     path: '/',
-    secure: true,
+    secure: false,
+    debug: 2
 });
 
 console.log(myPeer);
+
+// ---- PeerJS diagnostics ----------------------------------------------------
+myPeer.on('open', id => console.log('PEER OPEN (operator), my id:', id));
+myPeer.on('error', err => console.error('PEER ERROR (operator):', err.type, err));
+myPeer.on('disconnected', () => console.warn('PEER DISCONNECTED (operator)'));
+myPeer.on('close', () => console.warn('PEER CLOSED (operator)'));
+
 ///////////////////////////////////////////////////////////
 const myVideo = document.createElement('video');
 myVideo.className="server_window";
 myVideo.muted = true;
 var     peers={};
 ///////////////////////////////////////////////////////////
-navigator.mediaDevices.getUserMedia({
-    video:true,
-    audio:true
-}).then(stream =>{
-    addVideoStream(myVideo,stream);
-    console.log('Own video play started.');    
-    myPeer.on('call',call =>{
-        call.answer(stream);
-        const video = document.createElement('video');
-        call.on('stream',userVideoStream=>{
-            console.log("Calling on stream 1.");
-            addVideoStream(video,userVideoStream);
-        });
+
+// ---- Incoming call handler (registered before getUserMedia resolves) ------
+// A client can call us; we answer with our own stream.
+myPeer.on('call', call => {
+    console.log('OPERATOR INCOMING CALL from', call.peer);
+
+    call.on('error', err => console.error('OPERATOR INCOMING CALL ERROR:', err));
+    call.on('close', () => console.warn('OPERATOR INCOMING CALL CLOSED'));
+
+    const video = document.createElement('video');
+    video.className = "client_window";
+    video.width = 320;
+    video.height = 240;
+    video.autoplay = true;
+    video.playsInline = true;
+
+    let attached = false;
+    call.on('stream', userVideoStream => {
+        console.log('OPERATOR INCOMING REMOTE STREAM tracks:',
+            userVideoStream.getTracks().map(t => t.kind));
+        if (attached) return;
+        attached = true;
+        addVideoStream(video, userVideoStream);
     });
 
-    socket.on('user-connected',userId =>{
-        console.log('User connected: '+userId);
-        connectToNewUser(userId,stream);
-    });
+    if (localStream) {
+        call.answer(localStream);
+    } else {
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(s => {
+                localStream = s;
+                addVideoStream(myVideo, s);
+                call.answer(s);
+            })
+            .catch(err => console.error('operator getUserMedia (answer) failed:', err.name, err.message));
+    }
 });
+
+navigator.mediaDevices.getUserMedia({
+    video: true,
+    audio: true
+}).then(stream => {
+    localStream = stream;
+    addVideoStream(myVideo, stream);
+    console.log('Own video play started.');
+
+    socket.on('user-connected', userId => {
+        console.log('User connected: ' + userId);
+        // Find which slot this userId is ringing in, so we can record it.
+        let idx = -1;
+        for (let i = 0; i < MAX_CUSTOMER_NO; i++) {
+            if (currentUserId[i] == userId) { idx = i; break; }
+        }
+        connectToNewUser(userId, stream, idx);
+    });
+}).catch(err => {
+    console.error('operator getUserMedia failed:', err.name, err.message);
+});
+
 ////////////////////////////////////////////////////////////
-socket.on('user-disconnected',userId=>{
+socket.on('user-disconnected', userId => {
     console.log("user-disconnected is called.");
     for(let i=0; i < MAX_CUSTOMER_NO; i++)
     {
@@ -96,37 +148,57 @@ socket.on('user-disconnected',userId=>{
     }
 });
 
-myPeer.on('open',id=>{
+myPeer.on('open', id => {
     //socket.emit('join-room',ROOM_ID, id);
-}); 
+});
 
-function connectToNewUser(userId,stream,idx)
+// ---- Outgoing call (operator -> client) -----------------------------------
+function connectToNewUser(userId, stream, idx)
 {
-    const call  = myPeer.call(userId,stream);
-    console.log("Calling myPeer.call",userId,call,stream);    
+    if (!myPeer || !myPeer.open) {
+        console.error('operator connectToNewUser: myPeer not open, id =', userId);
+        return;
+    }
+    const call = myPeer.call(userId, stream);
+    if (!call) {
+        console.error('operator myPeer.call returned undefined for', userId);
+        return;
+    }
+    console.log("Calling myPeer.call", userId, call, stream);
+
     const video = document.createElement('video');
-    video.className="client_window";
-    call.on('stream',userVideoStream =>{
-        console.log("Calling on stream 2.");
-        addVideoStream(video,userVideoStream);
+    video.className = "client_window";
+    video.width = 320;
+    video.height = 240;
+    video.autoplay = true;
+    video.playsInline = true;
+
+    let attached = false;
+    call.on('stream', userVideoStream => {
+        console.log("Calling on stream 2. tracks:",
+            userVideoStream.getTracks().map(t => t.kind));
+        if (attached) return;
+        attached = true;
+        addVideoStream(video, userVideoStream);
     });
-    call.on('close',()=>{
+    call.on('error', err => console.error('operator OUTGOING CALL ERROR:', err));
+    call.on('close', () => {
         video.remove();
     });
     peers[userId] = call;
-    currentUserId[idx] = userId;
+    if (idx >= 0) currentUserId[idx] = userId;
 }
 
-function addVideoStream(video,stream)
+function addVideoStream(video, stream)
 {
-    video.srcObject = stream; 
-    video.addEventListener('loadedmetadata',()=>{
-        video.play();
+    video.srcObject = stream;
+    video.addEventListener('loadedmetadata', () => {
+        video.play().catch(e => console.warn('operator video play() rejected:', e));
     });
     videoGrid.append(video);
 }
 
-socket.on('OP-ACCEPT',(room,userId)=>{
+socket.on('OP-ACCEPT', (room, userId) => {
     console.log(`Operator accepted the call from ${room} to ${userId}`);
 
     for(let i=0; i < MAX_CUSTOMER_NO; i++)
@@ -154,24 +226,24 @@ function EndCurrentCall()
             let id   = "AcceptButton"+i;
             state[i] = idle;
             socket.emit('DISCONNECT-CALL-OPERATOR',ROOM_ID,currentUserId[i]);
-            document.getElementById(id).textContent = `   ...   `;            
+            document.getElementById(id).textContent = `   ...   `;
             if(peers[currentUserId[i]])
             {
                 peers[currentUserId[i]].close();
                 currentUserId[i] = -1;
                 peers = {};
-            }            
+            }
         }
-    }    
+    }
 }
 
-socket.on('OP-DISCONNECT-CALL-CLIENT',(room_id,userId)=>{
+socket.on('OP-DISCONNECT-CALL-CLIENT', (room_id, userId) => {
     console.log(`disconnect is received form ${userId}.`);
     for(let i=0; i < MAX_CUSTOMER_NO; i++)
     {
         if(
-            (userId == currentUserId[i]) 
-            && 
+            (userId == currentUserId[i])
+            &&
             (ROOM_ID == room_id)
           )
         {
@@ -189,7 +261,7 @@ socket.on('OP-DISCONNECT-CALL-CLIENT',(room_id,userId)=>{
     ProcessRing();
 });
 
-socket.on('RING_CANCELLED',(userId)=>{
+socket.on('RING_CANCELLED', (userId) => {
     console.log(`RING CANCEL is called for ${userId}.`);
 
     for(let i=0; i < MAX_CUSTOMER_NO; i++)
@@ -207,8 +279,7 @@ socket.on('RING_CANCELLED',(userId)=>{
     }
 });
 
-
-socket.on('RING_TIMEOUT',(userId)=>{
+socket.on('RING_TIMEOUT', (userId) => {
     console.log(`RING_TIMEOUT is called for ${userId}.`);
     for(let i=0; i < MAX_CUSTOMER_NO; i++)
     {
@@ -217,7 +288,7 @@ socket.on('RING_TIMEOUT',(userId)=>{
             if(state[i] == ringing)
             {
                 let id = "AcceptButton"+ i;
-                document.getElementById(id).textContent = "   ...   ";    
+                document.getElementById(id).textContent = "   ...   ";
                 state[i]  = idle;
                 ProcessRing();
             }
@@ -225,7 +296,7 @@ socket.on('RING_TIMEOUT',(userId)=>{
     }
 });
 
-socket.on('RING',(userId)=>{
+socket.on('RING', (userId) => {
     for(let i=0; i < MAX_CUSTOMER_NO; i++)
     {
         if(state[i] == idle)
@@ -248,7 +319,7 @@ function AcceptCall(idx)
     {
         EndCurrentCall();
         state[idx] = conversation;
-        socket.emit('ACCEPT',ROOM_ID,currentUserId[idx]);        
+        socket.emit('ACCEPT',ROOM_ID,currentUserId[idx]);
         document.getElementById(id).textContent = `Disconnect ${currentUserId[idx]}`;
         socket.emit('join-room',ROOM_ID, currentUserId[idx]);
         ProcessRing();

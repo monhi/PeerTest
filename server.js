@@ -39,11 +39,6 @@ const {PeerServer}  = require('peer');
 
 const peerServer = PeerServer({
     port: 3001
-	,
-    ssl: {
-      key:  fs.readFileSync(path.join(__dirname,'ssl','key.pem'), 'utf-8'),
-      cert: fs.readFileSync(path.join(__dirname,'ssl','cert.pem'), 'utf-8')
-    }
   });
 
 var   serverCntr    = 0;
