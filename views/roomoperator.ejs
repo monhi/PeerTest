@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <script>
+    const ROOM_ID = "<%= roomId %>"
+  </script>
+  <script src="/js/peerjs.min.js"           defer></script>
+  <script src="/js/socket.io.js" 			      defer></script>
+  <script src="/js/operatorscript.js"       defer></script>
+  <link  rel="stylesheet" href="/css/bootstrap.min.css">
+  <title>Video Call</title>
+
+  <style>
+
+    #video-grid {
+      /* display: grid;
+      grid-template-columns: repeat(auto-fill, 300px);
+      grid-auto-rows: 300px; */
+      display:  flex;
+      flex-direction: row;
+      justify-content: space-between;
+      width: 90vw;
+      height: 88vh;
+      margin: auto;
+      margin-top: 10px;
+    }
+    
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+ 
+    @font-face 
+    {
+          font-family: Vazir;
+          src: url("../font/Vazir-Black.woff2");
+    }
+
+    .containers {
+          display: grid;
+          grid-gap: 5px;
+          grid-template-columns: repeat(auto-fit, 1fr);
+          grid-template-rows: repeat(auto-fit, 300px);
+    }
+
+      .container {
+          display: flex;
+      }
+
+      .vid {
+          flex: 0 1 auto;
+          height: 400px;
+      }
+
+      .settings {
+          background-color: #4CAF50;
+          border: none;
+          color: white;
+          padding: 5px 10px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 14px;
+          margin: 2px 2px;
+          cursor: pointer;
+          font-family: Vazir;
+          position: absolute;
+          left: 200px;
+      }
+      .client_window { 
+        width: 45%;
+        height: 100%;
+        /* height : 50vh;
+        width: 50vw; */
+      }
+      .server_window { 
+        width: 45%;
+        height: 100%;
+        /* height : 50vh;
+        width: 50vw; */
+      }
+      .button_container {
+        width: 100%;
+        height: 8vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .call_button {
+      padding : 1rem;
+      border-radius: 8px;
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 2px 2px;
+      cursor: pointer;
+      font-family: Vazir;      
+    }
+      
+  </style>
+</head>
+<body>
+  <audio id="myAudio" loop preload="metadata">    
+    <source src="snd/Ring.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+
+<!-- <div class="row-1"> -->
+    <div id="video-grid"></div>
+<!-- </div> -->
+
+  <br />
+  <div class="button_container">
+      <button id="AcceptButton0" class="call_button" onclick="AcceptCall(0)">   ...    </button>
+      <button id="AcceptButton1" class="call_button" onclick="AcceptCall(1)">   ...    </button>
+      <button id="AcceptButton2" class="call_button" onclick="AcceptCall(2)">   ...    </button>
+      <button id="AcceptButton3" class="call_button" onclick="AcceptCall(3)">   ...    </button>
+      <button id="AcceptButton4" class="call_button" onclick="AcceptCall(4)">   ...    </button>
+      <button id="AcceptButton5" class="call_button" onclick="AcceptCall(5)">   ...    </button>
+      <button id="AcceptButton6" class="call_button" onclick="AcceptCall(6)">   ...    </button>
+      <button id="AcceptButton7" class="call_button" onclick="AcceptCall(7)">   ...    </button>
+  </div>
+  <script src="/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <script>
+    const CLIENT_ID = "<%= roomId %>"
+  </script>
+  
+  <link href="./css/bootstrap.min.css" rel="stylesheet">
+  <script src="/js/peerjs.min.js" defer></script>
+  <script src="/js/socket.io.js" defer></script>
+  <script src="/js/clientscript.js" defer></script>
+
+
+  <title>Video Call</title>
+  
+  <style>
+  .myimg
+  {
+    width: 200px;
+  }
+
+  @font-face {
+      font-family: Vazir;
+      src: url("../font/Vazir-Black.woff2");
+  }
+
+
+  .notificationStyle {
+      color: red;
+      text-align: center;
+      font-size: 24px;
+      margin: 2px 2px;
+      font-family: Vazir;
+      position: absolute;      
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container-fluid " >
+
+	<div class="row mt-4">
+	  <div class="col align-items-center text-center">
+		<img src="./img/gss.png" class="myimg" alt="">
+	  </div>
+	</div>
+    <div class="row d-flex justify-content-center ">
+      <div class="col-md-5 d-flex justify-content-center mt-5">
+        <div id="video-grid-client" >
+          <video id="clientVideo" width="320" height="240"></video>
+        </div>
+      </div>
+      <div class="col-md-5 d-flex justify-content-center mt-5">
+        <div id="video-grid-server" ></div>
+      </div>
+    </div>
+    <div class="row  mt-5">
+      <div class="col  text-center">
+          <button  id="Call" type="button" onclick="Ring()" class="btn btn-success btn-lg">Call the Operator </button>
+        </div>
+      </div>
+      <div class="row text-center mt-5">
+          <span id="Notification" class="notificationStyle"  ></span>          
+      </div>
+
+    </div>        
+  <script src="/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
