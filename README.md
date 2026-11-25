@@ -1,10 +1,12 @@
-VideoTester
+# VideoTester
 
-A simple PeerJS + Socket.IO video call demo with a client page and an operator page.
+A simple PeerJS + Socket.IO video call demo with a client page and an operator page that uses WebRTC for real-time peer-to-peer audio and video streaming between the client and operator, while Socket.IO handles signaling and PeerJS simplifies the WebRTC connection setup.
 
-IMPORTANT: Manual Patch Required After npm install
+## IMPORTANT: Manual Patch Required After npm install
 
-The peer package (peer@1.0.2) is incompatible with the ws library version it pulls in. Its bundled code calls new ws.WebSocketServer(...) using the old CommonJS export style, but ws@8 only exposes WebSocketServer as a named ESM export. The result is a startup crash:
+The peer package (peer@1.0.2) is incompatible with the ws library version it pulls in. Its bundled code calls new ws.WebSocketServer(...) 
+
+using the old CommonJS export style, but ws@8 only exposes WebSocketServer as a named ESM export. The result is a startup crash:
 
 TypeError: (0 , ws.WebSocketServer) is not a constructor
 at node_modules/peer/dist/index.cjs:271
@@ -15,43 +17,26 @@ Open node_modules/peer/dist/index.cjs.
 
 Go to line 271. You will see:
 
-this.socketServer = config.createWebSocketServer
-? config.createWebSocketServer(options)
-: new (0, 
-c
-l
-6
-I
-w
-cl6Iwws.WebSocketServer)(options);
+this.socketServer = config.createWebSocketServer? config.createWebSocketServer(options): new (0, cl6Iwcl6Iwws.WebSocketServer)(options);
 
-Change WebSocketServer to Server:
+Change WebSocketServer to Server:this.socketServer = config.createWebSocketServer? config.createWebSocketServer(options): new (0, cl6Iwcl6Iwws.Server)(options);
 
-this.socketServer = config.createWebSocketServer
-? config.createWebSocketServer(options)
-: new (0, 
-c
-l
-6
-I
-w
-cl6Iwws.Server)(options);
-
-Save the file.
+ Save the file.
 
 ws v8 still exposes Server as an alias in its CommonJS export, so new ws.Server(options) works and the PeerJS server starts normally.
 
-This patch is temporary. It lives inside node_modules and is overwritten by any reinstall. The durable alternative is an overrides entry in package.json (for example "overrides": { "ws": "$ws" } with "ws": "^7.5.10" as a direct dependency) so npm resolves a compatible ws for peer automatically.
+This patch is temporary. It lives inside node_modules and is overwritten by any reinstall. 
 
-Requirements
 
-Node.js 14 or newer
+# Requirements
+
+Node.js 14 or newer but less that Node.js 20
 
 A modern browser (Firefox, Chrome, Edge)
 
 Webcam and microphone
 
-Setup
+# Setup
 
 Open a command prompt in the project folder.
 
@@ -90,28 +75,27 @@ When the call is accepted, the remote video appears in the second video slot on 
 Project Structure
 
 .
-├── server.js Express + Socket.IO + PeerJS signaling
+├── server.js                  Express + Socket.IO + PeerJS signaling
 ├── package.json
 ├── public/
-│ ├── js/
-│ │ ├── peerjs.min.js must be PeerJS 1.x (matches peer@1.x server)
-│ │ ├── socket.io.js
-│ │ ├── clientscript.js
-│ │ └── operatorscript.js
-│ ├── css/
-│ ├── img/
-│ ├── snd/Ring.mp3
-│ └── font/
+│   ├── js/
+│   │   ├── peerjs.min.js      PeerJS 1.x (matches peer@1.x server)
+│   │   ├── socket.io.js
+│   │   ├── clientscript.js
+│   │   └── operatorscript.js
+│   ├── css/
+│   ├── img/
+│   ├── snd/
+│   │   └── Ring.mp3
+│   └── font/
 ├── views/
-│ ├── room.ejs client page
-│ └── roomoperator.ejs operator page
+│   ├── room.ejs               client page
+│   └── roomoperator.ejs       operator page
 └── ssl/
-├── key.pem
-└── cert.pem
+    ├── key.pem
+    └── cert.pem
 
-Notes
-
-PeerJS versions must match
+## PeerJS versions must match
 
 peer@1.x on the server requires the PeerJS 1.x client build in public/js/peerjs.min.js. A 0.x client sends ?key=peerjs&token=... query parameters that the 1.x server ignores, and the WebSocket connection fails with "Firefox can't establish a connection to the server at wss://localhost:3001/peerjs?key=peerjs&...".
 
@@ -155,26 +139,3 @@ Chrome on Android with chrome://flags/#unsafely-treat-insecure-origin-as-secure 
 
 Once the page is served over HTTPS, the secure setting in the PeerJS config automatically switches to wss://.
 
-Source-map 404s in the console
-
-peerjs.min.js.map and socket.io.js.map may 404 in the browser console. These are cosmetic. To silence them, either serve the .map files next to the .js files, remove the trailing //# sourceMappingURL=... comment from each minified file, or disable "Enable source maps" in the browser devtools.
-
-Troubleshooting
-
-Symptom: TypeError: (0 , ws.WebSocketServer) is not a constructor at startup
-Likely cause: The peer patch was not applied after npm install. See the top of this README.
-
-Symptom: Firefox can't establish a connection to the server at wss://localhost:3001/...
-Likely cause: Self-signed certificate for port 3001 not trusted, or peerjs.min.js is still the 0.x build.
-
-Symptom: PEER OPEN never prints in the console
-Likely cause: PeerJS signaling server unreachable. Check that npm run start is running, port 3001 is listening, and the certificate is trusted.
-
-Symptom: myPeer.call() returns undefined
-Likely cause: myPeer is not open. Wait for PEER OPEN in the console before clicking Accept.
-
-Symptom: Remote video never appears
-Likely cause: Check the browser console for INCOMING CALL, REMOTE STREAM, and CALL ERROR messages. Also verify both peers use the same path and port as server.js.
-
-Symptom: Camera does not start on a phone
-Likely cause: The page is not a secure context (HTTP + LAN IP). Use HTTPS or the Chrome flag described above.
