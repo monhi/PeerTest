@@ -30,7 +30,7 @@ This patch is temporary. It lives inside node_modules and is overwritten by any 
 
 # Requirements
 
-Node.js 14 or newer but less that Node.js 20
+Node.js 14 or newer 
 
 A modern browser (Firefox, Chrome, Edge)
 
