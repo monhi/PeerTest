@@ -148,7 +148,7 @@ Click "Advanced...", then "Accept the Risk and Continue".
 
 You may also need to do the same for https://localhost:4000/.
 
-Mobile / LAN testing
+## Mobile / LAN testing
 
 The browser only grants camera access on secure contexts (HTTPS or localhost). If you open the app from a phone via http://<laptop-LAN-IP>:4000, navigator.mediaDevices is undefined and the camera will not start. To test from a phone you need either:
 
