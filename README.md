@@ -76,24 +76,43 @@ Project Structure
 
 .
 ├── server.js                  Express + Socket.IO + PeerJS signaling
+
 ├── package.json
+
 ├── public/
+
 │   ├── js/
+
 │   │   ├── peerjs.min.js      PeerJS 1.x (matches peer@1.x server)
+
 │   │   ├── socket.io.js
+
 │   │   ├── clientscript.js
+
 │   │   └── operatorscript.js
+
 │   ├── css/
+
 │   ├── img/
+
 │   ├── snd/
+
 │   │   └── Ring.mp3
+
 │   └── font/
+
 ├── views/
+
 │   ├── room.ejs               client page
+
 │   └── roomoperator.ejs       operator page
+
 └── ssl/
+
     ├── key.pem
+    
     └── cert.pem
+   
 
 ## PeerJS versions must match
 
